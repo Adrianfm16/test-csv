@@ -1496,7 +1496,8 @@ function showResults(){
       </div>`;
     }).join("");
 
-    card.innerHTML=`<div class="rc-hdr"><span class="rc-num">P${q.numero||i+1}</span><span class="rc-q">${q.pregunta}</span>${badge}</div>
+    const editBtnHtml=currentRol==="admin"?`<button onclick="openEditQuestion(S.currentQuestions[${i}])" style="font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid var(--muted2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:var(--sans);font-weight:600;transition:all .15s;flex-shrink:0" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--muted2)';this.style.color='var(--muted)'">✏️ Editar</button>`:"";
+    card.innerHTML=`<div class="rc-hdr"><span class="rc-num">P${q.numero||i+1}</span><span class="rc-q">${q.pregunta}</span>${badge}${editBtnHtml}</div>
     <div class="rc-body">
       ${optsHtml}
       ${q.referencia?`<div style="margin-top:4px;padding:8px 14px;border-radius:12px;background:var(--accent4-soft);border:1px solid var(--accent4);font-family:var(--mono);font-size:11px;color:var(--accent4);font-weight:600">📖 ${q.referencia}</div>`:""}
@@ -1728,9 +1729,9 @@ async function dbLoadDetalleSesion(historialId){
 // ── EDIT QUESTION ──────────────────────────────────────────────────────────
 let editingQuestion = null;
 
-function openEditQuestion(){
+function openEditQuestion(q){
   if(currentRol!=="admin") return;
-  const q=S.currentQuestions[S.currentIndex];
+  q=q||S.currentQuestions[S.currentIndex];
   if(!q) return;
   editingQuestion=q;
   $("editPregunta").value=q.pregunta;
@@ -1793,8 +1794,12 @@ async function saveEditQuestion(){
     editingQuestion.referencia=updates.referencia;
     const idx=S.questions.findIndex(q=>q.familia===editingQuestion.familia&&q.tema===editingQuestion.tema&&q.numero===editingQuestion.numero);
     if(idx>=0) Object.assign(S.questions[idx],{pregunta:updates.pregunta,opciones:editingQuestion.opciones,correcta,referencia:updates.referencia});
+    // Also patch the question object inline within any answered results being reviewed
+    const qIdxCur=S.currentQuestions?S.currentQuestions.findIndex(q=>q.familia===editingQuestion.familia&&q.tema===editingQuestion.tema&&q.numero===editingQuestion.numero):-1;
+    if(qIdxCur>=0) Object.assign(S.currentQuestions[qIdxCur],{pregunta:updates.pregunta,opciones:editingQuestion.opciones,correcta,referencia:updates.referencia});
     closeEditModal();
-    if(S.mode==="estudio") renderStudy();
+    if($("examResults").style.display==="flex") showResults();
+    else if(S.mode==="estudio") renderStudy();
     else if(S.mode==="examen") renderExam();
     setStatus("ok","✓ Pregunta actualizada");
   }catch(e){
