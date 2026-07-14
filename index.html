@@ -1797,8 +1797,18 @@ async function saveEditQuestion(){
     // Also patch the question object inline within any answered results being reviewed
     const qIdxCur=S.currentQuestions?S.currentQuestions.findIndex(q=>q.familia===editingQuestion.familia&&q.tema===editingQuestion.tema&&q.numero===editingQuestion.numero):-1;
     if(qIdxCur>=0) Object.assign(S.currentQuestions[qIdxCur],{pregunta:updates.pregunta,opciones:editingQuestion.opciones,correcta,referencia:updates.referencia});
+    // Also patch the historial detail rows currently being viewed, if any
+    let touchedDetalle=false;
+    if(currentDetalles){
+      const dIdx=currentDetalles.findIndex(d=>d.familia===editingQuestion.familia&&d.tema===editingQuestion.tema&&d.numero===editingQuestion.numero);
+      if(dIdx>=0){
+        Object.assign(currentDetalles[dIdx],{pregunta:updates.pregunta,opcion_a:updates.opcion_a,opcion_b:updates.opcion_b,opcion_c:updates.opcion_c,opcion_d:updates.opcion_d,correcta,referencia:updates.referencia});
+        touchedDetalle=true;
+      }
+    }
     closeEditModal();
     if($("examResults").style.display==="flex") showResults();
+    else if(touchedDetalle&&$("sessionModal").style.display==="flex") renderDetalleCards(currentDetalles);
     else if(S.mode==="estudio") renderStudy();
     else if(S.mode==="examen") renderExam();
     setStatus("ok","✓ Pregunta actualizada");
@@ -1808,9 +1818,10 @@ async function saveEditQuestion(){
   btn.disabled=false;btn.textContent="Guardar cambios";
 }
 
-function closeSessionModal(){$("sessionModal").style.display="none";}
+function closeSessionModal(){$("sessionModal").style.display="none";currentDetalles=null;}
 
 async function openSessionHistory(familia, tema){
+  currentDetalles=null;
   $("sessionModalTitle").textContent=tema||familia;
   $("sessionModal").style.display="flex";
   const body=$("sessionModalBody");
@@ -1836,10 +1847,13 @@ async function openSessionHistory(familia, tema){
   });
 }
 
+let currentDetalles=null;
+
 async function openDetalleSesion(sesion, familia, tema){
   const body=$("sessionModalBody");
   body.innerHTML='<div class="hist-empty">Cargando preguntas…</div>';
   const detalles=await dbLoadDetalleSesion(sesion.id);
+  currentDetalles=detalles;
   body.innerHTML="";
   const back=document.createElement("span");
   back.className="detail-back";back.textContent="← Volver a sesiones";
@@ -1860,10 +1874,17 @@ async function openDetalleSesion(sesion, familia, tema){
     msg.innerHTML=`No hay detalle guardado para esta sesión.<br><small>ID sesión: ${sesion.id||"?"}<br>Solo las sesiones realizadas después de activar el sistema de detalle guardan las preguntas.</small>`;
     body.appendChild(msg);return;
   }
-  console.log("DETALLES ARRAY:", detalles);
-  console.log("PRIMER DETALLE:", JSON.stringify(detalles[0]));
+  const cardsList=document.createElement("div");
+  cardsList.id="detalleCardsList";
+  body.appendChild(cardsList);
+  renderDetalleCards(detalles);
+}
+
+function renderDetalleCards(detalles){
+  const cardsList=$("detalleCardsList");
+  if(!cardsList) return;
+  cardsList.innerHTML="";
   detalles.forEach((d,idx)=>{
-    if(idx===0) console.log("Procesando d:", d.pregunta, d.opcion_a, d.correcta);
     const isOk=d.es_correcta,isBlank=d.es_blanco;
     const badge=isBlank?'<span class="rc-badge blank">— Blanco</span>':`<span class="rc-badge ${isOk?"ok":"fail"}">${isOk?"✓ Correcta":"✗ Incorrecta"}</span>`;
     const opciones={A:d.opcion_a,B:d.opcion_b,C:d.opcion_c,D:d.opcion_d};
@@ -1873,19 +1894,32 @@ async function openDetalleSesion(sesion, familia, tema){
       if(isC){border="var(--success)";bg="var(--accent2-soft)";cBorder="var(--success)";cBg="var(--success)";cColor="#fff";tag='<span style="margin-left:auto;font-size:10px;font-weight:700;color:var(--success)">✓ Correcta</span>';}
       if(isU&&!isC){border="var(--danger)";bg="var(--danger-soft)";cBorder="var(--danger)";cBg="var(--danger)";cColor="#fff";tag='<span style="margin-left:auto;font-size:10px;font-weight:700;color:var(--danger)">✗ Tu resp.</span>';}
       else if(isU&&isC){tag='<span style="margin-left:auto;font-size:10px;font-weight:700;color:var(--success)">✓ Tu resp.</span>';}
+      if(!opciones[l]) return "";
       return `<div style="position:relative;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;border:1.5px solid ${border};background:${bg};margin:0 0 6px 0;width:100%;box-sizing:border-box;">
         <div style="width:24px;height:24px;border-radius:50%;border:2px solid ${cBorder};background:${cBg};color:${cColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${l}</div>
         <span style="font-size:13px;color:#2C2622;flex:1;">${opciones[l]||"(vacío)"}</span>${tag}</div>`;
     }).join("");
+    const editBtnHtml=currentRol==="admin"?`<button onclick="openEditQuestionFromDetalle(${idx})" style="font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid #C9BBA0;background:#EFE7D8;color:#7A6F5D;cursor:pointer;font-family:var(--sans);font-weight:600;flex-shrink:0;align-self:flex-start" onmouseover="this.style.borderColor='#8C6FC9';this.style.color='#8C6FC9'" onmouseout="this.style.borderColor='#C9BBA0';this.style.color='#7A6F5D'">✏️ Editar</button>`:"";
     const card=document.createElement("div");
     card.style.cssText="position:relative;clear:both;background:#F2EBDF;border:2px solid #E6DCC9;border-radius:14px;overflow:hidden;margin:0 0 12px 0;display:block;width:100%;box-sizing:border-box;";
     card.innerHTML=`<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid #E6DCC9;color:#2C2622;">
         <span style="font-family:monospace;font-size:11px;color:#9A8F7E;flex-shrink:0;font-weight:700">P${d.numero}</span>
         <span style="font-size:14px;font-weight:600;flex:1;color:#2C2622;">${d.pregunta || "(sin texto)"}</span>
-        ${badge}
+        ${badge}${editBtnHtml}
       </div>
       <div style="padding:10px 14px 14px;color:#2C2622;">${optsHtml}${d.referencia?`<div style="margin-top:6px;padding:7px 12px;border-radius:10px;background:#ECE5F8;border:1px solid #8C6FC9;font-family:monospace;font-size:10px;color:#8C6FC9">📖 ${d.referencia}</div>`:""}</div>`;
-    body.appendChild(card);
+    cardsList.appendChild(card);
+  });
+}
+
+function openEditQuestionFromDetalle(idx){
+  if(currentRol!=="admin"||!currentDetalles) return;
+  const d=currentDetalles[idx];
+  if(!d) return;
+  openEditQuestion({
+    familia:d.familia,tema:d.tema,numero:d.numero,pregunta:d.pregunta,
+    opciones:{A:d.opcion_a,B:d.opcion_b,C:d.opcion_c,D:d.opcion_d},
+    correcta:d.correcta,referencia:d.referencia||""
   });
 }
 
