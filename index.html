@@ -1038,6 +1038,11 @@ function loadQs(rows){
   renderFamilias();hideAll();
 }
 
+// Comprueba si un tema (test) ya se ha realizado alguna vez, según el historial cargado
+function temaYaRealizado(familia,tema){
+  return history.some(h=>h.familia===familia&&h.tema===tema);
+}
+
 // ── FAMILIAS ───────────────────────────────────────────────────────────────
 function renderFamilias(){
   const fl=$("familiasList");fl.innerHTML="";
@@ -1100,8 +1105,9 @@ function renderFamilias(){
         // Topics inside subtema
         Object.keys(subObj.topics).sort((a,b)=>a.localeCompare(b,"es")).forEach(tema=>{
           const cnt=subObj.topics[tema].length;
+          const hecho=temaYaRealizado(familia,tema);
           const row=document.createElement("div");row.className="topic-row"+(S.currentFamilia===familia&&S.currentSubtema===sub&&S.currentTema===tema?" active":"");
-          row.innerHTML=`<span style="flex:1">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
+          row.innerHTML=`<span style="flex:1;${hecho?"":"font-weight:700;color:var(--text)"}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
           row.querySelector(".t-del").addEventListener("click",async ev=>{ev.stopPropagation();if(!confirm(`¿Eliminar "${tema}"?`))return;await deleteTema(familia,tema);});
           row.addEventListener("click",()=>selectTopic(familia,sub,tema));subTd.appendChild(row);
         });
@@ -1111,8 +1117,9 @@ function renderFamilias(){
         // No subtema - show topics directly
         Object.keys(subObj.topics).sort((a,b)=>a.localeCompare(b,"es")).forEach(tema=>{
           const cnt=subObj.topics[tema].length;
+          const hecho=temaYaRealizado(familia,tema);
           const row=document.createElement("div");row.className="topic-row"+(S.currentFamilia===familia&&!S.currentSubtema&&S.currentTema===tema?" active":"");
-          row.innerHTML=`<span style="flex:1">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
+          row.innerHTML=`<span style="flex:1;${hecho?"":"font-weight:700;color:var(--text)"}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
           row.querySelector(".t-del").addEventListener("click",async ev=>{ev.stopPropagation();if(!confirm(`¿Eliminar "${tema}"?`))return;await deleteTema(familia,tema);});
           row.addEventListener("click",()=>selectTopic(familia,null,tema));td.appendChild(row);
         });
@@ -1693,7 +1700,7 @@ async function addToHistory(){
   const now=new Date();
   const date=now.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"})+" "+now.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
   const entry={familia:currentFamilia,tema:currentTema||"Todas",correct:correctas,wrong:incorrectas,total,percent:Math.round(nota*10),duration,date,user_email:currentUser?.email};
-  history.unshift(entry);renderHistory();
+  history.unshift(entry);renderHistory();renderFamilias();
   try{
     const histId=await dbSaveEntry(entry);
     if(histId) await dbSaveHistorialDetalle(histId,currentQuestions,answers);
