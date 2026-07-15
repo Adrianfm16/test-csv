@@ -922,7 +922,10 @@ async function dbRemoveFallada(q){
   const email=currentUser?.email||"";
   try{
     await sf(`/preguntas_falladas?user_email=eq.${enc(email)}&familia=eq.${enc(q.familia)}&subtema=eq.${enc(q.subtema||"")}&tema=eq.${enc(q.tema)}&numero=eq.${q.numero}`,{method:"DELETE",prefer:"return=minimal"});
+    q._esFallada=false;
   }catch(e){console.warn("Error eliminando fallo:",e);}
+  // Refresh fallo counts in panel after a short delay (misma lógica que al añadir un fallo)
+  setTimeout(()=>{ if(S.questions.length) renderFamilias(); },600);
 }
 
 async function dbLoadFalladas(familia, subtema){
