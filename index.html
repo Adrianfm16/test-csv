@@ -986,8 +986,9 @@ function parseCSV(text){
     const pregunta=get("pregunta"),A=get("a"),B=get("b"),C=get("c"),D=get("d");
     const correcta=get("correcta").toUpperCase();
     const referencia=idx["referencia"]!=null?get("referencia"):"";
-    if(!pregunta||!A||!B||!C||!D)continue;
+    if(!pregunta||!A||!B||!C)continue; // A,B,C son obligatorias; D es opcional (preguntas de 3 respuestas)
     if(!["A","B","C","D"].includes(correcta))continue;
+    if(!D&&correcta==="D")continue; // correcta apunta a D pero no hay opción D -> fila inválida
     rows.push({familia,subtema,tema,numero,pregunta,opciones:{A,B,C,D},correcta,referencia});
   }
   return rows;
