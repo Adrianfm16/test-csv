@@ -1142,7 +1142,17 @@ async function deleteTema(familia,tema){
     setStatus("ok",`Eliminando "${tema}"…`);
     await dbDeleteTema(familia,tema);
     const fam=S.byFamilia[familia];
-    if(fam){delete fam.topics[tema];fam.allQuestions=fam.allQuestions.filter(q=>q.tema!==tema);if(!fam.allQuestions.length){delete S.byFamilia[familia];S.familias=S.familias.filter(f=>f!==familia);}}
+    if(fam){
+      for(const [subKey,subObj] of Object.entries(fam.subtemas||{})){
+        if(subObj.topics&&subObj.topics[tema]){
+          delete subObj.topics[tema];
+          subObj.allQuestions=(subObj.allQuestions||[]).filter(q=>q.tema!==tema);
+          if(!Object.keys(subObj.topics).length) delete fam.subtemas[subKey];
+        }
+      }
+      fam.allQuestions=fam.allQuestions.filter(q=>q.tema!==tema);
+      if(!fam.allQuestions.length){delete S.byFamilia[familia];S.familias=S.familias.filter(f=>f!==familia);}
+    }
     S.questions=S.questions.filter(q=>!(q.familia===familia&&q.tema===tema));
     const ts=new Set(S.questions.map(q=>q.tema));
     $("tbQ").textContent=S.questions.length;$("tbF").textContent=Object.keys(S.byFamilia).length;$("tbT").textContent=ts.size;
