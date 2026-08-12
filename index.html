@@ -67,20 +67,21 @@
     .fname{font-family:var(--sans);font-size:11px;color:var(--muted);margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
 
     .fam-block{margin-bottom:4px;}
-    .fam-hdr{display:flex;align-items:center;gap:7px;padding:7px 6px;cursor:pointer;user-select:none;border-radius:8px;transition:background .12s;}
+    .fam-hdr{display:flex;align-items:flex-start;gap:7px;padding:7px 6px;cursor:pointer;user-select:none;border-radius:8px;transition:background .12s;}
     .fam-hdr:hover{background:var(--surface2);}
-    .fam-dot{width:11px;height:11px;border-radius:4px;flex-shrink:0;}
-    .fam-name{font-size:13px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .fam-dot{width:11px;height:11px;border-radius:4px;flex-shrink:0;margin-top:2px;}
+    .fam-name{font-size:13px;font-weight:700;flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.25;}
     .fam-cnt{font-family:var(--sans);font-size:11px;color:var(--muted);font-weight:600;}
     .fam-arr{font-size:9px;color:var(--muted2);transition:transform .15s;margin-left:2px;}
     .fam-hdr.collapsed .fam-arr{transform:rotate(-90deg);}
     .fam-topics{display:flex;flex-direction:column;gap:2px;padding-left:16px;}
     .fam-topics.hidden{display:none;}
-    .topic-row{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--muted);transition:all .12s;border:1px solid transparent;font-weight:500;}
+    .topic-row{display:flex;align-items:flex-start;gap:7px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--muted);transition:all .12s;border:1px solid transparent;font-weight:500;}
     .topic-row:hover{background:var(--surface2);color:var(--text);}
     .topic-row.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600;}
-    .t-cnt{margin-left:auto;font-family:var(--sans);font-size:11px;color:var(--muted2);font-weight:600;}
-    .t-del{font-size:12px;color:var(--muted2);cursor:pointer;display:none;padding:0 2px;}
+    .t-name{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3;}
+    .t-cnt{margin-left:auto;font-family:var(--sans);font-size:11px;color:var(--muted2);font-weight:600;flex-shrink:0;padding-top:1px;}
+    .t-del{font-size:12px;color:var(--muted2);cursor:pointer;display:none;padding:0 2px;flex-shrink:0;}
     .topic-row:hover .t-del{display:block;}
     @media(min-width:769px){
       .topic-row{font-size:14.5px;padding:9px 10px;}
@@ -1063,7 +1064,7 @@ function renderFamilias(){
     const td=document.createElement("div");td.className="fam-topics"+(isActiveFam?"":" hidden");
     // "Todas" row for familia
     const ar=document.createElement("div");ar.className="topic-row"+(S.currentFamilia===familia&&!S.currentSubtema&&!S.currentTema&&!S.currentFallos?" active":"");
-    ar.innerHTML=`<span style="color:${color};font-size:10px">▸</span><span style="flex:1">Todas</span><span class="t-cnt">${fam.allQuestions.length}</span>`;
+    ar.innerHTML=`<span style="color:${color};font-size:10px;flex-shrink:0">▸</span><span class="t-name">Todas</span><span class="t-cnt">${fam.allQuestions.length}</span>`;
     ar.addEventListener("click",()=>selectTopic(familia,null,null));td.appendChild(ar);
 
     // Fallos row for familia
@@ -1089,11 +1090,11 @@ function renderFamilias(){
         const subBlock=document.createElement("div");subBlock.style.cssText="margin-left:8px";
         const isActiveSub = S.currentFamilia===familia && S.currentSubtema===sub;
         const subHdr=document.createElement("div");subHdr.className="fam-hdr"+(isActiveSub?"":" collapsed");subHdr.style.cssText="padding:4px 2px;";
-        subHdr.innerHTML=`<span style="font-size:10px;color:${color}88">▸</span><span style="font-size:11px;color:var(--text);flex:1;font-weight:500">${sub}</span><span class="fam-cnt">${subObj.allQuestions.length}</span><span class="fam-arr" style="font-size:7px">▼</span>`;
+        subHdr.innerHTML=`<span style="font-size:10px;color:${color}88;flex-shrink:0">▸</span><span style="font-size:11px;color:var(--text);flex:1;min-width:0;font-weight:500;white-space:normal;overflow-wrap:anywhere;line-height:1.3">${sub}</span><span class="fam-cnt" style="flex-shrink:0">${subObj.allQuestions.length}</span><span class="fam-arr" style="font-size:7px;flex-shrink:0">▼</span>`;
         const subTd=document.createElement("div");subTd.className="fam-topics"+(isActiveSub?"":" hidden");subTd.style.paddingLeft="8px";
         // "Todas" for subtema
         const subAllRow=document.createElement("div");subAllRow.className="topic-row"+(S.currentFamilia===familia&&S.currentSubtema===sub&&!S.currentTema&&!S.currentFallos?" active":"");
-        subAllRow.innerHTML=`<span style="color:${color};font-size:10px">▸</span><span style="flex:1">Todas</span><span class="t-cnt">${subObj.allQuestions.length}</span>`;
+        subAllRow.innerHTML=`<span style="color:${color};font-size:10px;flex-shrink:0">▸</span><span class="t-name">Todas</span><span class="t-cnt">${subObj.allQuestions.length}</span>`;
         subAllRow.addEventListener("click",()=>selectTopic(familia,sub,null));subTd.appendChild(subAllRow);
 
         // Fallos row for subtema
@@ -1113,7 +1114,7 @@ function renderFamilias(){
           const cnt=subObj.topics[tema].length;
           const hecho=temaYaRealizado(familia,tema);
           const row=document.createElement("div");row.className="topic-row"+(S.currentFamilia===familia&&S.currentSubtema===sub&&S.currentTema===tema?" active":"");
-          row.innerHTML=`<span style="flex:1;${hecho?"":"font-weight:700;color:var(--text)"}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
+          row.innerHTML=`<span class="t-name" style="${hecho?"":"font-weight:700;color:var(--text)"}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
           row.querySelector(".t-del").addEventListener("click",async ev=>{ev.stopPropagation();if(!confirm(`¿Eliminar "${tema}"?`))return;await deleteTema(familia,tema);});
           row.addEventListener("click",()=>selectTopic(familia,sub,tema));subTd.appendChild(row);
         });
@@ -1125,7 +1126,7 @@ function renderFamilias(){
           const cnt=subObj.topics[tema].length;
           const hecho=temaYaRealizado(familia,tema);
           const row=document.createElement("div");row.className="topic-row"+(S.currentFamilia===familia&&!S.currentSubtema&&S.currentTema===tema?" active":"");
-          row.innerHTML=`<span style="flex:1;${hecho?"":"font-weight:700;color:var(--text)"}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
+          row.innerHTML=`<span class="t-name" style="${hecho?"":"font-weight:700;color:var(--text)"}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
           row.querySelector(".t-del").addEventListener("click",async ev=>{ev.stopPropagation();if(!confirm(`¿Eliminar "${tema}"?`))return;await deleteTema(familia,tema);});
           row.addEventListener("click",()=>selectTopic(familia,null,tema));td.appendChild(row);
         });
