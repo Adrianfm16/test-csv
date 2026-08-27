@@ -529,7 +529,6 @@
         <span style="color:var(--warn)">Exámenes Oficiales</span> → tema = localidad
       </div>
       <button class="upload-btn" style="width:100%;border-radius:6px;padding:5px 0;text-align:center" onclick="downloadTemplate()">⬇ Descargar plantilla</button>
-      <button class="upload-btn" style="width:100%;border-radius:6px;padding:5px 0;text-align:center;margin-top:6px" onclick="exportarPreguntas()">⬇ Exportar preguntas actuales</button>
     </div>
     <div class="lp-section" style="flex:1">
       <div class="lp-label">Familias y temas</div>
@@ -2177,27 +2176,6 @@ Se borrarán ${cnt} preguntas. Esta acción no se puede deshacer.`)) return;
   hideAll();
   $("emptyState").style.display="flex";
   S.currentFamilia=null;S.currentSubtema=null;S.currentTema=null;
-}
-
-// ── EXPORT CURRENT QUESTIONS ────────────────────────────────────────────────
-async function exportarPreguntas(){
-  try{
-    const preguntas = await dbLoadPreguntas();
-    if(!preguntas.length){ alert("No hay preguntas guardadas todavía."); return; }
-    const rows = [["familia","subtema","tema","numero","pregunta","A","B","C","D","correcta","referencia"]];
-    for(const q of preguntas){
-      rows.push([q.familia, q.subtema||"", q.tema, q.numero||"", q.pregunta, q.opciones.A, q.opciones.B, q.opciones.C, q.opciones.D, q.correcta, q.referencia||""]);
-    }
-    const csv = rows.map(r => r.map(c => `"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "preguntas_actuales.csv"; a.click();
-    URL.revokeObjectURL(url);
-  }catch(e){
-    console.error(e);
-    alert("Error exportando preguntas: "+e.message);
-  }
 }
 
 // ── TEMPLATE DOWNLOAD ─────────────────────────────────────────────────────
