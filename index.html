@@ -833,7 +833,7 @@ async function dbSaveHistorialDetalle(historialId,qs,answers){
 }
 
 async function dbLoadHistorialDetalle(historialId){
-  try{return await sf(`/historial_detalle?historial_id=eq.${historialId}&order=numero.asc`);}
+  try{return await sf(`/historial_detalle?historial_id=eq.${historialId}&order=numero.asc&limit=5000`);}
   catch(e){return[];}
 }
 
@@ -1748,10 +1748,10 @@ async function dbLoadDetalleSesion(historialId){
   const email=currentUser?.email||"";
   try{
     // First try with email filter
-    let rows=await sf(`/historial_detalle?historial_id=eq.${historialId}&user_email=eq.${enc(email)}&order=numero.asc&limit=300`);
+    let rows=await sf(`/historial_detalle?historial_id=eq.${historialId}&user_email=eq.${enc(email)}&order=numero.asc&limit=5000`);
     // If no results, try without email filter (for older sessions)
     if(!rows.length){
-      rows=await sf(`/historial_detalle?historial_id=eq.${historialId}&order=numero.asc&limit=300`);
+      rows=await sf(`/historial_detalle?historial_id=eq.${historialId}&order=numero.asc&limit=5000`);
     }
     console.log("detalle rows:", rows.length, "for id:", historialId);
     return rows;
