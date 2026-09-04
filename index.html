@@ -961,6 +961,24 @@ async function dbCountFalladas(familia, subtema){
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 const S={questions:[],byFamilia:{},familias:[],currentFamilia:null,currentSubtema:null,currentTema:null,currentFallos:false,currentQuestions:[],currentIndex:0,answers:{},examAnswers:{},startTime:null,endTime:null,mode:"examen"};
+
+// ── SEMANA ACTUAL (subtema marcado como foco de la semana) ─────────────────
+function getSemanaActual(){
+  try{return JSON.parse(localStorage.getItem("semanaActual")||"null");}catch(e){return null;}
+}
+function toggleSemanaActual(familia,sub){
+  const cur=getSemanaActual();
+  if(cur&&cur.familia===familia&&cur.sub===sub){
+    localStorage.removeItem("semanaActual");
+  }else{
+    localStorage.setItem("semanaActual",JSON.stringify({familia,sub}));
+  }
+  renderFamilias();
+}
+function isSemanaActual(familia,sub){
+  const cur=getSemanaActual();
+  return !!cur&&cur.familia===familia&&cur.sub===sub;
+}
 let history=[];
 const $=id=>document.getElementById(id);
 const FAM_COLORS=["#58a6ff","#d2a8ff","#3fb950","#f78166","#e3b341","#79c0ff","#ffa657"];
@@ -1089,8 +1107,9 @@ function renderFamilias(){
         // Subtema header
         const subBlock=document.createElement("div");subBlock.style.cssText="margin-left:8px";
         const isActiveSub = S.currentFamilia===familia && S.currentSubtema===sub;
-        const subHdr=document.createElement("div");subHdr.className="fam-hdr"+(isActiveSub?"":" collapsed");subHdr.style.cssText="padding:4px 2px;";
-        subHdr.innerHTML=`<span style="font-size:10px;color:${color}88;flex-shrink:0">▸</span><span style="font-size:11px;color:var(--text);flex:1;min-width:0;font-weight:500;white-space:normal;overflow-wrap:anywhere;line-height:1.3">${sub}</span><span class="fam-cnt" style="flex-shrink:0">${subObj.allQuestions.length}</span><span class="fam-arr" style="font-size:7px;flex-shrink:0">▼</span>`;
+        const esSemana = isSemanaActual(familia,sub);
+        const subHdr=document.createElement("div");subHdr.className="fam-hdr"+(isActiveSub?"":" collapsed");subHdr.style.cssText="padding:4px 2px;"+(esSemana?`background:${color}18;border-radius:6px;`:"");
+        subHdr.innerHTML=`<span style="font-size:10px;color:${color}88;flex-shrink:0">▸</span><span style="font-size:11px;color:var(--text);flex:1;min-width:0;font-weight:${esSemana?800:500};white-space:normal;overflow-wrap:anywhere;line-height:1.3">${esSemana?"⭐ ":""}${sub}</span><span class="pin-sub" title="${esSemana?"Quitar de esta semana":"Marcar como tema de esta semana"}" style="flex-shrink:0;font-size:12px;cursor:pointer;opacity:${esSemana?1:0.35};padding:0 4px">📌</span><span class="fam-cnt" style="flex-shrink:0">${subObj.allQuestions.length}</span><span class="fam-arr" style="font-size:7px;flex-shrink:0">▼</span>`;
         const subTd=document.createElement("div");subTd.className="fam-topics"+(isActiveSub?"":" hidden");subTd.style.paddingLeft="8px";
         // "Todas" for subtema
         const subAllRow=document.createElement("div");subAllRow.className="topic-row"+(S.currentFamilia===familia&&S.currentSubtema===sub&&!S.currentTema&&!S.currentFallos?" active":"");
@@ -1118,6 +1137,7 @@ function renderFamilias(){
           row.querySelector(".t-del").addEventListener("click",async ev=>{ev.stopPropagation();if(!confirm(`¿Eliminar "${tema}"?`))return;await deleteTema(familia,tema);});
           row.addEventListener("click",()=>selectTopic(familia,sub,tema));subTd.appendChild(row);
         });
+        subHdr.querySelector(".pin-sub").addEventListener("click",ev=>{ev.stopPropagation();toggleSemanaActual(familia,sub);});
         subHdr.addEventListener("click",()=>{subHdr.classList.toggle("collapsed");subTd.classList.toggle("hidden");});
         subBlock.appendChild(subHdr);subBlock.appendChild(subTd);td.appendChild(subBlock);
       } else {
