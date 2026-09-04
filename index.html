@@ -846,7 +846,7 @@ async function dbLoadHistorialByTema(familia,tema){
 async function dbLoadHistory(){
   const email = currentUser?.email||"";
   const rows=await sf(`/historial?order=fecha.desc&limit=200&user_email=eq.${encodeURIComponent(email)}`);
-  return rows.map(r=>({familia:r.familia,tema:r.tema,correct:r.correct,wrong:r.wrong,total:r.total,percent:r.percent,duration:r.duration,date:new Date(r.fecha).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"})+" "+new Date(r.fecha).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"}),id:r.id}));
+  return rows.map(r=>({familia:r.familia,tema:r.tema,correct:r.correct,wrong:r.wrong,total:r.total,percent:r.percent,duration:r.duration,fecha:r.fecha,date:new Date(r.fecha).toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"})+" "+new Date(r.fecha).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"}),id:r.id}));
 }
 async function dbDeleteAll(){await sf("/historial?id=neq.00000000-0000-0000-0000-000000000000",{method:"DELETE",prefer:"return=minimal"});}
 async function dbSavePreguntas(rows){
@@ -971,13 +971,21 @@ function toggleSemanaActual(familia,sub){
   if(cur&&cur.familia===familia&&cur.sub===sub){
     localStorage.removeItem("semanaActual");
   }else{
-    localStorage.setItem("semanaActual",JSON.stringify({familia,sub}));
+    localStorage.setItem("semanaActual",JSON.stringify({familia,sub,pinnedAt:new Date().toISOString()}));
   }
   renderFamilias();
 }
 function isSemanaActual(familia,sub){
   const cur=getSemanaActual();
   return !!cur&&cur.familia===familia&&cur.sub===sub;
+}
+// Un tema cuenta como "hecho esta semana" si hay una entrada en el historial
+// posterior al momento en que se marcó el pin del subtema
+function temaHechoEstaSemana(familia,tema){
+  const cur=getSemanaActual();
+  if(!cur||cur.familia!==familia)return false;
+  const desde=new Date(cur.pinnedAt).getTime();
+  return history.some(h=>h.familia===familia&&h.tema===tema&&new Date(h.fecha).getTime()>=desde);
 }
 let history=[];
 const $=id=>document.getElementById(id);
@@ -1131,9 +1139,12 @@ function renderFamilias(){
         // Topics inside subtema
         Object.keys(subObj.topics).sort((a,b)=>a.localeCompare(b,"es")).forEach(tema=>{
           const cnt=subObj.topics[tema].length;
-          const hecho=temaYaRealizado(familia,tema);
+          const hecho=esSemana?temaHechoEstaSemana(familia,tema):temaYaRealizado(familia,tema);
+          const style=esSemana
+            ?(hecho?"color:var(--muted2)":"font-weight:700;color:var(--text)")
+            :(hecho?"":"font-weight:700;color:var(--text)");
           const row=document.createElement("div");row.className="topic-row"+(S.currentFamilia===familia&&S.currentSubtema===sub&&S.currentTema===tema?" active":"");
-          row.innerHTML=`<span class="t-name" style="${hecho?"":"font-weight:700;color:var(--text)"}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
+          row.innerHTML=`<span class="t-name" style="${style}">${tema}</span><span class="t-del" title="Eliminar">🗑</span><span class="t-cnt">${cnt}</span>`;
           row.querySelector(".t-del").addEventListener("click",async ev=>{ev.stopPropagation();if(!confirm(`¿Eliminar "${tema}"?`))return;await deleteTema(familia,tema);});
           row.addEventListener("click",()=>selectTopic(familia,sub,tema));subTd.appendChild(row);
         });
@@ -1741,7 +1752,7 @@ async function addToHistory(){
   const duration=Math.round((endTime-startTime)/1000);
   const now=new Date();
   const date=now.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"})+" "+now.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
-  const entry={familia:currentFamilia,tema:currentTema||"Todas",correct:correctas,wrong:incorrectas,total,percent:Math.round(nota*10),duration,date,user_email:currentUser?.email};
+  const entry={familia:currentFamilia,tema:currentTema||"Todas",correct:correctas,wrong:incorrectas,total,percent:Math.round(nota*10),duration,date,fecha:now.toISOString(),user_email:currentUser?.email};
   history.unshift(entry);renderHistory();renderFamilias();
   try{
     const histId=await dbSaveEntry(entry);
