@@ -1850,6 +1850,16 @@ async function saveEditQuestion(){
   try{
     await sf(`/preguntas?familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`,
       {method:"PATCH",prefer:"return=minimal",body:JSON.stringify(updates)});
+    // Propagar la corrección a las copias ya guardadas (historial_detalle y preguntas_falladas
+    // son snapshots independientes que NO se actualizan solos al editar la pregunta maestra)
+    try{
+      await sf(`/historial_detalle?familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`,
+        {method:"PATCH",prefer:"return=minimal",body:JSON.stringify(updates)});
+    }catch(e){console.warn("Error actualizando historial_detalle:",e);}
+    try{
+      await sf(`/preguntas_falladas?familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`,
+        {method:"PATCH",prefer:"return=minimal",body:JSON.stringify(updates)});
+    }catch(e){console.warn("Error actualizando preguntas_falladas:",e);}
     // Update in local state
     editingQuestion.pregunta=updates.pregunta;
     editingQuestion.opciones={A:updates.opcion_a,B:updates.opcion_b,C:updates.opcion_c,D:updates.opcion_d};
