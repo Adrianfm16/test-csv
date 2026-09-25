@@ -1810,6 +1810,7 @@ function openEditQuestion(q){
     if(btn) btn.style.display=q.opciones[l]?"":"none";
   });
   $("editModal").style.display="flex";
+  const msg=$("editModalMsg");if(msg){msg.style.display="none";}
 }
 
 function closeEditModal(){$("editModal").style.display="none";}
@@ -1836,6 +1837,8 @@ function selectCorrect(letter){
 async function saveEditQuestion(){
   if(!editingQuestion||currentRol!=="admin") return;
   const btn=$("editSaveBtn");
+  const msg=$("editModalMsg");
+  msg.style.display="none";
   btn.disabled=true;btn.textContent="Guardando…";
   const enc=encodeURIComponent;
   const correcta=$("editModal").dataset.correcta||editingQuestion.correcta;
@@ -1891,6 +1894,9 @@ async function saveEditQuestion(){
     setStatus("ok","✓ Pregunta actualizada");
   }catch(e){
     setStatus("err","Error: "+e.message);
+    msg.style.display="block";
+    msg.style.background="#FADCDC";msg.style.color="#8A1C1C";msg.style.border="1px solid #C94F4F";
+    msg.textContent="❌ No se guardó: "+e.message;
   }
   btn.disabled=false;btn.textContent="Guardar cambios";
 }
@@ -2355,6 +2361,7 @@ init();
         </div>
       </div>
       <div class="edit-field"><div class="edit-label">Referencia (página del libro)</div><input class="edit-input" id="editRef" type="text" placeholder="Ej: Pág. 32 M2 CEIS"/></div>
+      <div id="editModalMsg" style="display:none;margin-bottom:10px;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:600"></div>
       <button class="edit-save-btn" id="editSaveBtn" onclick="saveEditQuestion()">Guardar cambios</button>
     </div>
   </div>
