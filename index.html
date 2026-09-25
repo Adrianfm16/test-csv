@@ -866,7 +866,7 @@ async function dbSavePreguntas(rows){
 async function dbLoadPreguntas(){
   let all=[],offset=0;
   while(true){const rows=await sf(`/preguntas?order=numero.asc,familia.asc,tema.asc&limit=1000&offset=${offset}`);all=all.concat(rows);if(rows.length<1000)break;offset+=1000;}
-  return all.map(r=>({familia:r.familia,subtema:r.subtema||"",tema:r.tema,numero:r.numero||0,pregunta:r.pregunta,opciones:{A:r.opcion_a,B:r.opcion_b,C:r.opcion_c,D:r.opcion_d},correcta:r.correcta,referencia:r.referencia||""}));
+  return all.map(r=>({id:r.id,familia:r.familia,subtema:r.subtema||"",tema:r.tema,numero:r.numero||0,pregunta:r.pregunta,opciones:{A:r.opcion_a,B:r.opcion_b,C:r.opcion_c,D:r.opcion_d},correcta:r.correcta,referencia:r.referencia||""}));
 }
 async function dbDeleteTema(familia,tema){const enc=encodeURIComponent;await sf(`/preguntas?familia=eq.${enc(familia)}&tema=eq.${enc(tema)}`,{method:"DELETE",prefer:"return=minimal"});}
 
@@ -1848,8 +1848,12 @@ async function saveEditQuestion(){
     correcta, referencia:$("editRef").value.trim()
   };
   try{
-    await sf(`/preguntas?familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`,
-      {method:"PATCH",prefer:"return=minimal",body:JSON.stringify(updates)});
+    const filtroPregunta=editingQuestion.id?`id=eq.${enc(editingQuestion.id)}`:`familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`;
+    const filas=await sf(`/preguntas?${filtroPregunta}`,
+      {method:"PATCH",prefer:"return=representation",body:JSON.stringify(updates)});
+    if(!filas||filas.length===0){
+      throw new Error("No se encontró la pregunta en la base de datos (posible desajuste de familia/tema/número). No se guardó nada.");
+    }
     // Propagar la corrección a las copias ya guardadas (historial_detalle y preguntas_falladas
     // son snapshots independientes que NO se actualizan solos al editar la pregunta maestra)
     try{
@@ -1865,10 +1869,10 @@ async function saveEditQuestion(){
     editingQuestion.opciones={A:updates.opcion_a,B:updates.opcion_b,C:updates.opcion_c,D:updates.opcion_d};
     editingQuestion.correcta=updates.correcta;
     editingQuestion.referencia=updates.referencia;
-    const idx=S.questions.findIndex(q=>q.familia===editingQuestion.familia&&q.tema===editingQuestion.tema&&q.numero===editingQuestion.numero);
+    const idx=editingQuestion.id?S.questions.findIndex(q=>q.id===editingQuestion.id):S.questions.findIndex(q=>q.familia===editingQuestion.familia&&q.tema===editingQuestion.tema&&q.numero===editingQuestion.numero);
     if(idx>=0) Object.assign(S.questions[idx],{pregunta:updates.pregunta,opciones:editingQuestion.opciones,correcta,referencia:updates.referencia});
     // Also patch the question object inline within any answered results being reviewed
-    const qIdxCur=S.currentQuestions?S.currentQuestions.findIndex(q=>q.familia===editingQuestion.familia&&q.tema===editingQuestion.tema&&q.numero===editingQuestion.numero):-1;
+    const qIdxCur=S.currentQuestions?(editingQuestion.id?S.currentQuestions.findIndex(q=>q.id===editingQuestion.id):S.currentQuestions.findIndex(q=>q.familia===editingQuestion.familia&&q.tema===editingQuestion.tema&&q.numero===editingQuestion.numero)):-1;
     if(qIdxCur>=0) Object.assign(S.currentQuestions[qIdxCur],{pregunta:updates.pregunta,opciones:editingQuestion.opciones,correcta,referencia:updates.referencia});
     // Also patch the historial detail rows currently being viewed, if any
     let touchedDetalle=false;
