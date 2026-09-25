@@ -1859,10 +1859,21 @@ async function saveEditQuestion(){
     }
     // Propagar la corrección a las copias ya guardadas (historial_detalle y preguntas_falladas
     // son snapshots independientes que NO se actualizan solos al editar la pregunta maestra)
+    let filasDetalle=0, errDetalle=null;
     try{
-      await sf(`/historial_detalle?familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`,
-        {method:"PATCH",prefer:"return=minimal",body:JSON.stringify(updates)});
-    }catch(e){console.warn("Error actualizando historial_detalle:",e);}
+      // Si venimos de una sesión de historial concreta, forzamos esa fila por su propio id
+      // (garantiza que ESA sesión se actualice aunque el filtro compuesto no coincida)
+      if(editingQuestion.detalleId){
+        const rd0=await sf(`/historial_detalle?id=eq.${enc(editingQuestion.detalleId)}`,
+          {method:"PATCH",prefer:"return=representation",body:JSON.stringify(updates)});
+        filasDetalle+=rd0?rd0.length:0;
+      }
+      // Y de paso propagamos a cualquier otra sesión que tenga la misma pregunta
+      const filtroDetalle=editingQuestion.detalleId?`familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}&id=neq.${enc(editingQuestion.detalleId)}`:`familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`;
+      const rd=await sf(`/historial_detalle?${filtroDetalle}`,
+        {method:"PATCH",prefer:"return=representation",body:JSON.stringify(updates)});
+      filasDetalle+=rd?rd.length:0;
+    }catch(e){console.warn("Error actualizando historial_detalle:",e);errDetalle=e.message;}
     try{
       await sf(`/preguntas_falladas?familia=eq.${enc(editingQuestion.familia)}&tema=eq.${enc(editingQuestion.tema)}&numero=eq.${editingQuestion.numero}`,
         {method:"PATCH",prefer:"return=minimal",body:JSON.stringify(updates)});
@@ -1891,7 +1902,11 @@ async function saveEditQuestion(){
     else if(touchedDetalle&&$("sessionModal").style.display==="flex") renderDetalleCards(currentDetalles);
     else if(S.mode==="estudio") renderStudy();
     else if(S.mode==="examen") renderExam();
-    setStatus("ok","✓ Pregunta actualizada");
+    if(editingQuestion.detalleId&&filasDetalle===0){
+      setStatus("err","Pregunta guardada, pero el historial no se actualizó"+(errDetalle?": "+errDetalle:""));
+    }else{
+      setStatus("ok","✓ Pregunta actualizada");
+    }
   }catch(e){
     setStatus("err","Error: "+e.message);
     msg.style.display="block";
@@ -2002,7 +2017,7 @@ function openEditQuestionFromDetalle(idx){
   openEditQuestion({
     familia:d.familia,tema:d.tema,numero:d.numero,pregunta:d.pregunta,
     opciones:{A:d.opcion_a,B:d.opcion_b,C:d.opcion_c,D:d.opcion_d},
-    correcta:d.correcta,referencia:d.referencia||""
+    correcta:d.correcta,referencia:d.referencia||"",detalleId:d.id
   });
 }
 
